@@ -4,7 +4,15 @@ import solve
 
 
 class WordleSolver(cmd.Cmd):
-    intro = 'Welcome to the wordle solver.   Type help or ? to list commands.\n'
+    intro = \
+"""Wordle Solver Copyright (C) 2022 Richard Quinn
+
+    This program comes with ABSOLUTELY NO WARRANTY.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions. See http://www.gnu.org/licenses/gpl-3.0.html.
+
+Type help or ? to list commands."""
+
     prompt = '(wordle_solver) '
     file = None
     current_wordlist: list[str] = []
