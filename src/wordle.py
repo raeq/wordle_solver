@@ -1,5 +1,7 @@
 import cmd
+
 from rich import print
+
 import solve
 
 
@@ -15,9 +17,9 @@ Type help or ? to list commands."""
 
     prompt = '(wordle_solver) '
     file = None
-    current_wordlist: list[str] = []
+    current_wordlist: set[str] = []
 
-    def __init__(self, words:list[str]):
+    def __init__(self, words: set[str]):
         self.current_wordlist = words
         super().__init__()
 
@@ -30,7 +32,7 @@ Type help or ? to list commands."""
         print("You guessed: ", "".join([l for l, r in guess]))
 
         self.current_wordlist = solve.get_top_recommendations(self.current_wordlist, guess)
-        print(f"Top choices: {self.current_wordlist[0:10]}")
+        print(f"Top choices of {len(self.current_wordlist)}: {top_choices(common_words, self.current_wordlist, 10)}")
 
 
     def do_bye(self, arg):
@@ -61,8 +63,24 @@ Type help or ? to list commands."""
             self.file = None
 
 
+def top_choices(common_words: list[str], possible_words: set[str], size: int = 10) -> list[str]:
+    intersection: list = [word for word in common_words if word in possible_words]
+    my_len = len(intersection)
+
+    if my_len < size:
+        for word in possible_words:
+            if word not in intersection and word in all_words:
+                intersection.append(word)
+            if len(intersection) >= size:
+                break
+
+    return intersection[0:size]
+
+
 if __name__ == '__main__':
-    all_words: list[str] = sorted([line.rstrip() for line in open("words.txt").readlines()])
-    new_words: list[str] = all_words.copy()
+    common_words = [line.rstrip().split(" ")[-1] for line in open("common_words.txt").readlines()]
+    common_words = [word for word in common_words if len(word) == 5]
+    all_words: set[str] = {line.rstrip() for line in open("words.txt").readlines()}
+    new_words: set[str] = all_words.copy()
 
     WordleSolver(words=all_words).cmdloop()

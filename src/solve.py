@@ -27,23 +27,24 @@ def parse_input(user_input: str) -> list[Guess]:
     return parsed_input
 
 
-def get_top_recommendations(words: list[str], guess: list[Guess]):
+def get_top_recommendations(words: set[str], guess: list[Guess]):
+    words = set(words)
     # only keep words which have this letter in this position
     for key, value in enumerate(guess):
         if value.result == Result.CORRECT_LOCATION:
-            words = [word for word in words if word[key] == value.letter]
+            words = {word for word in words if word[key] == value.letter}
 
     # only keep words which have this letter somewhere
     for key, value in enumerate(guess):
         if value.result == Result.INCORRECT_LOCATION:
-            words = [word for word in words if value.letter in word]
+            words = {word for word in words if word[key] != value.letter and value.letter in word}
 
-    # only keep words which do not have this letter in this position
+    # only keep words which do not have this letter
     for key, value in enumerate(guess):
         if value.result == Result.NOTPRESENT:
-            words = [word for word in words if value.letter not in word]
+            words = {word for word in words if value.letter not in word}
 
-    ranked_words = [(word, calculate_frequency_score(word)) for word in words]
+    ranked_words = {(word, calculate_frequency_score(word)) for word in words}
     ranked_words = sorted(ranked_words, key=lambda x: x[1], reverse=True)
     return [word for word, score in ranked_words]
 
