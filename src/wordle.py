@@ -26,13 +26,59 @@ Type help or ? to list commands."""
     def do_newgame(self):
         print("You are starting a new game.")
 
+
+    def do_solve(self, arg1):
+        g, c = arg1.split(" ")
+        if not solve.validate_guess(g, all_words):
+            print(f"Invalid guess, '{g}' not in dictionary.")
+            return
+        if not solve.validate_guess(c, all_words):
+            print(f"Invalid guess, '{c}' not in dictionary.")
+            return
+
+
+        guess, word = solve.parse_input(g + " " + solve.evaluate(g, c))
+
+        print(f"Your starting guess is '{g}' and the target answer is '{c}'.")
+
+
+        while True:
+            self.current_wordlist = solve.get_top_recommendations(self.current_wordlist, g)
+            top_suggestions = solve.top_choices(common_words, self.current_wordlist, 40)
+
+            g = top_suggestions[0]
+
+            if len(top_suggestions) == 1:
+                print(f"Success {top_suggestions}")
+                break
+
+
+    def do_evaluate(self, arg1):
+        g, c = arg1.split(" ")
+        if not solve.validate_guess(g, all_words):
+            print(f"Invalid guess, '{g}' not in dictionary.")
+            return
+        if not solve.validate_guess(c, all_words):
+            print(f"Invalid guess, '{c}' not in dictionary.")
+            return
+
+        print(solve.evaluate(guess=g, correct=c))
+
     def do_guess(self, arg1):
-        guess: list[solve.Guess] = solve.parse_input(arg1)
+        guess, word = solve.parse_input(arg1)
+
+        if not solve.validate_guess(word, all_words):
+            print(f"Invalid guess, '{word}' not in dictionary.")
+            return
+
 
         print("You guessed: ", "".join([l for l, r in guess]))
 
         self.current_wordlist = solve.get_top_recommendations(self.current_wordlist, guess)
-        print(f"Top choices of {len(self.current_wordlist)}: {top_choices(common_words, self.current_wordlist, 10)}")
+        top_suggestions = solve.top_choices(common_words, self.current_wordlist, 40)
+
+        print(f"Top choices of {len(self.current_wordlist)}: "
+              f"{top_suggestions}")
 
 
     def do_bye(self, arg):
@@ -62,19 +108,6 @@ Type help or ? to list commands."""
             self.file.close()
             self.file = None
 
-
-def top_choices(common_words: list[str], possible_words: set[str], size: int = 10) -> list[str]:
-    intersection: list = [word for word in common_words if word in possible_words]
-    my_len = len(intersection)
-
-    if my_len < size:
-        for word in possible_words:
-            if word not in intersection and word in all_words:
-                intersection.append(word)
-            if len(intersection) >= size:
-                break
-
-    return intersection[0:size]
 
 
 if __name__ == '__main__':
