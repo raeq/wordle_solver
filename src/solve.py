@@ -1,12 +1,12 @@
-from string import ascii_letters
 from enum import Enum
-from typing import NamedTuple
+from string import ascii_letters
+from typing import NamedTuple, Sequence
 
 import frequencies
 
 
 class Result(Enum):
-    NOTPRESENT = "-"
+    NOT_PRESENT = "-"
     INCORRECT_LOCATION = "+"
     CORRECT_LOCATION = "="
 
@@ -39,7 +39,7 @@ def get_top_recommendations(words: set[str], guess: list[Guess]):
 
     # only keep words which do not have this letter
     for key, value in enumerate(guess):
-        if value.result == Result.NOTPRESENT:
+        if value.result == Result.NOT_PRESENT:
             if word.count(value.letter) == 1:
                 words = {word for word in words if value.letter not in word}
             else:
@@ -56,7 +56,7 @@ def get_top_recommendations(words: set[str], guess: list[Guess]):
 
 
 def top_choices(common_words: list[str], possible_words: set[str], size: int = 10) -> list[str]:
-    # first sort these according to word frquency
+    # first sort these according to word frequency
 
     intersection: list = [word for word in common_words if word in possible_words]
     my_len = len(intersection)
@@ -68,28 +68,43 @@ def top_choices(common_words: list[str], possible_words: set[str], size: int = 1
             if len(intersection) >= size:
                 break
 
+    return intersection[:size]
+
     # take each position and see the count of letters in that position
 
+
+def top_choices2(common_words: list[str], possible_words: set[str], size: int = 10) -> list[str]:
     from collections import Counter
+    intersection: list = [word for word in common_words if word in possible_words]
+
     letters = []
 
     for i in range(5):
         letters.append([])
 
     for word in intersection:
-        for i in range(5):
-            letters[i].append(word[i])
+        for index, letter in enumerate(word):
+            letters[index].append(letter)
 
     for i in range(5):
         letters[i] = Counter(letters[i])
 
     bests = []
-    for i in range(len(letters)):
-        c = Counter(letters[i])
-        bests.append((i, c.most_common(1)[0]))
-    print(bests)
+    for index, data in enumerate(letters):
+        c = Counter(data)
+        bests.append(c.most_common(1)[0])
 
-    return intersection[0:size]
+    standard_choice = intersection[0]
+    better_choices = intersection.copy()
+
+    for index, most_common in enumerate(bests):
+        if most_common[0] != standard_choice[index]:
+            # see if we can choose a better word
+            temp = [word for word in better_choices if word[index] == most_common[0]]
+            if len(temp) > 0:
+                better_choices = temp
+
+    return better_choices[0:size]
 
 
 def calculate_frequency_score(word: str) -> float:
@@ -103,16 +118,14 @@ def evaluate(guess: str, correct: str) -> list[Guess]:
         if correct[index] == letter:
             result.append(Guess(letter=letter, result=Result.CORRECT_LOCATION))
         elif letter not in correct:
-            result.append(Guess(letter=letter, result=Result.NOTPRESENT))
+            result.append(Guess(letter=letter, result=Result.NOT_PRESENT))
         else:
             result.append(Guess(letter=letter, result=Result.INCORRECT_LOCATION))
 
     return result
 
 
-
-
-def validate_guess(guess: str, all_words:list[str]) -> bool:
+def validate_guess(guess: str, all_words: set[str]) -> bool:
     ret_value = False
 
     if len(guess) == 5:
@@ -121,3 +134,49 @@ def validate_guess(guess: str, all_words:list[str]) -> bool:
                 ret_value = True
 
     return ret_value
+
+
+def search(word_list: set[str], letter: str, quantity: int = 1) -> set[str]:
+    return {word for word in word_list if word.count(letter) == quantity}
+
+
+def best_starting_word(word_list: set[str], target: str) -> list[str]:
+    results: list[tuple[int, str]] = []
+
+    for idx, g in enumerate(word_list):
+        original_g = g + ""
+        n: int = 0
+        current_wordlist = word_list.copy()
+
+        while True:
+            guess_list = evaluate(g, target)
+            guess_input = "".join([x.result.value for x in guess_list])
+
+            guess, word = parse_input(g + " " + guess_input)
+
+            current_wordlist = get_top_recommendations(current_wordlist, guess)
+
+            g = current_wordlist[0]
+
+            n += 1
+            if n >= 6 or guess_input == "=====":
+                print(f"Found {len(results)} of {idx} attempts.", end='\r', flush=True)
+
+                if n < 3:
+                    results.append((n, original_g))
+                break
+
+    return [word for counter, word in results if counter < 3]
+
+
+def load_all_words(filename: str = "words.txt") -> set[str]:
+    return {line.rstrip().lower() for line in open(filename).readlines()}
+
+
+def load_common_words(filename: str = "common_words.txt") -> list[str]:
+    return [word for word in [line.rstrip().split(" ")[-1].lower()
+                              for line in open(filename).readlines()]]
+
+
+def filter_length(words: Sequence, length: int = 5) -> list[str]:
+    return list(filter(lambda x: len(x) == length, words))
