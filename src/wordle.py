@@ -93,7 +93,11 @@ class WordleSolver(cmd.Cmd):
         print(solve.evaluate(guess=g, correct=c))
 
     def do_guess(self, arg1):
-        guess, word = solve.parse_input(arg1)
+        try:
+            guess, word = solve.parse_input(arg1)
+        except solve.IncorrectInputException as e:
+            print(f"Your second input needs to be 5 characters from {{-,=.+}}, not {arg1}")
+            return
 
         if not solve.validate_guess(word, self.all_words):
             print(f"Invalid guess, '{word}' not in dictionary.")
@@ -138,5 +142,7 @@ class WordleSolver(cmd.Cmd):
 if __name__ == '__main__':
     common_w: list[str] = solve.filter_length(solve.load_common_words(), 5)
     all_w: set[str] = solve.load_all_words()
-
-    WordleSolver(all_words=all_w, common_words=common_w).cmdloop()
+    try:
+        WordleSolver(all_words=all_w, common_words=common_w).cmdloop()
+    except solve.WordleException as e:
+        print(f"An error occurred: {e}")

@@ -5,6 +5,27 @@ from typing import NamedTuple, Sequence
 import frequencies
 
 
+class WordleException(Exception):
+    _message: str
+
+    def __init__(self, message="There was a Wordle exception."):
+        self._message = message
+        super().__init__(message)
+
+    def __str__(self):
+        return f"WordleException - {self._message}"
+
+
+class IncorrectInputException(WordleException):
+    def __init__(self, message="word"):
+        super().__init__(f"Your second input needs to be 5 characters from {{-,=.+}}, not {message}")
+
+
+class NotInDictionaryException(WordleException):
+    def __init__(self, message="word"):
+        super().__init__(f"The word {message} is not in the dictionary.")
+
+
 class Result(Enum):
     NOT_PRESENT = "-"
     INCORRECT_LOCATION = "+"
@@ -17,13 +38,16 @@ class Guess(NamedTuple):
 
 
 def parse_input(user_input: str) -> tuple[list[Guess], str]:
-    word, results = user_input.split(" ")
     parsed_input = []
 
-    for l, r in zip(word, results):
-        g = Guess(letter=l.lower(),
-                  result=Result(r))
-        parsed_input.append(g)
+    try:
+        word, results = user_input.split(" ")
+        for l, r in zip(word, results):
+            g = Guess(letter=l.lower(),
+                      result=Result(r))
+            parsed_input.append(g)
+    except ValueError as e:
+        raise IncorrectInputException from e
 
     return parsed_input, "".join([l for l, r in parsed_input])
 
@@ -160,10 +184,10 @@ def best_starting_word(word_list: set[str], target: str) -> list[str]:
 
             n += 1
             if n >= 6 or guess_input == "=====":
-                print(f"Found {len(results)} of {idx} attempts.", end='\r', flush=True)
 
                 if n < 3:
                     results.append((n, original_g))
+                    print(f"Found {len(results)} of {idx} attempts: {results}", flush=True)
                 break
 
     return [word for counter, word in results if counter < 3]
