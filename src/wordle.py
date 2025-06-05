@@ -3,6 +3,36 @@ import logging
 from pathlib import Path
 from typing import Set, List, Optional, Union
 from contextlib import contextmanager
+import json
+from dataclasses import dataclass, asdict
+from typing import Dict, Any
+
+@dataclass
+class SolverConfig:
+    """Configuration settings for the Wordle solver"""
+    words_file: str = "words.txt"
+    common_words_file: str = "common_words.txt"
+    max_recommendations: int = 10
+    log_level: str = "INFO"
+    enable_rich: bool = True
+    auto_save_session: bool = False
+    session_file: str = "session.json"
+    default_first_guess: str = "arose"
+    
+    @classmethod
+    def load_from_file(cls, config_file: str = "config.json") -> 'SolverConfig':
+        """Load configuration from JSON file"""
+        try:
+            with open(config_file, 'r') as f:
+                data = json.load(f)
+                return cls(**data)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return cls()  # Return default config
+    
+    def save_to_file(self, config_file: str = "config.json") -> None:
+        """Save configuration to JSON file"""
+        with open(config_file, 'w') as f:
+            json.dump(asdict(self), f, indent=2)
 
 try:
     from rich import print
@@ -317,6 +347,48 @@ Type help or ? to list commands."""
     def default(self, line: str) -> None:
         """Handle unknown commands"""
         self._print_error(f"Unknown command: {line}. Type 'help' for available commands.")
+
+import time
+@dataclass
+class GameState:
+    """Represents the current state of a Wordle game"""
+    guesses: List[str] = None
+    remaining_words: Set[str] = None
+    game_number: int = 1
+    start_time: float = None
+    is_solved: bool = False
+    target_word: Optional[str] = None  # For practice mode
+    
+    def __post_init__(self):
+        if self.guesses is None:
+            self.guesses = []
+        if self.remaining_words is None:
+            self.remaining_words = set()
+        if self.start_time is None:
+            self.start_time = time.time()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
+        return {
+            'guesses': self.guesses,
+            'remaining_words': list(self.remaining_words),
+            'game_number': self.game_number,
+            'start_time': self.start_time,
+            'is_solved': self.is_solved,
+            'target_word': self.target_word
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'GameState':
+        """Create from dictionary"""
+        state = cls()
+        state.guesses = data.get('guesses', [])
+        state.remaining_words = set(data.get('remaining_words', []))
+        state.game_number = data.get('game_number', 1)
+        state.start_time = data.get('start_time', time.time())
+        state.is_solved = data.get('is_solved', False)
+        state.target_word = data.get('target_word')
+        return state
 
 
 def main():
